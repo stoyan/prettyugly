@@ -1,5 +1,8 @@
 Uglify (strip spaces) or prettify (add consistent spaces) CSS code
 
+    "Ambition makes you look pretty ugly..."
+    ~ Radiohead, Paranoid Android
+
 ## Installation
 
     $ npm install prettyugly

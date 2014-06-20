@@ -2513,7 +2513,6 @@ module.exports = {
   },
 
   process: function(node) {
-    console.log(node);
     node.splice(2, 0, ['s', ' ']);
     return node;
   }
@@ -2689,9 +2688,6 @@ exports.ugly = function ugly(css) {
 exports.pretty = function pretty(css) {
   var ast = gonzo.parse(css);
   ast = prettyAST(ast);
-  
-  console.log(gonzo.toCSS(ast));
-  
   return gonzo.toCSS(ast);
 };
 

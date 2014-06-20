@@ -33,14 +33,15 @@
   function update() {
     err.innerHTML = '';
     try {
-      p = pu.pretty(css.value);
-      u = pu.ugly(css.value);
+      pretty.innerHTML = pu.pretty(css.value);
+      ugly.innerHTML = pu.ugly(css.value);
+
     } catch (e) {
       err.innerHTML = "lolwutomgbbq: " + e.message;
+      pretty.innerHTML = '';
+      ugly.innerHTML = '';
     }
 
-    pretty.innerHTML = p;
-    ugly.innerHTML = u;
     Prism.highlightElement(pretty);
   }
 
