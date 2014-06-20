@@ -34,8 +34,8 @@ a{background:red;color:blue}
 
 ## CLI
 
-  $ prettyugly pretty stuffs/example.css
-  $ prettyugly ugly stuffs/example.css
+    $ prettyugly pretty stuffs/example.css
+    $ prettyugly ugly stuffs/example.css
 
 ## Playground
 
