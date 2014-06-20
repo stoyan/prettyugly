@@ -1,0 +1,23 @@
+{
+  "name": "prettyugly",
+  "version": "0.0.1",
+  "description": "Pretty/uglify CSS",
+  "keywords": [
+    "css",
+    "transform",
+    "browser",
+    "minify"
+  ],
+  "author": "Stoyan <ssttoo@ymail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/stoyan/prettyugly.git"
+  },
+  "main": "index",
+  "bin": {
+    "prettyugly": "./bin/cli.js"
+  },
+  "dependencies": {
+    "gonzales-ast": "*"
+  }
+}
