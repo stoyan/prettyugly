@@ -2641,41 +2641,43 @@ var gonzo = require('gonzales-ast');
 
 function uglyfyAST(ast) {
   return gonzo.traverse(ast, [
-    require('./ugly/space-functions.js'),
-    require('./ugly/space-trim.js'),
-    require('./ugly/space-single.js'),
-    require('./ugly/space-delimiter.js'),
-    require('./ugly/space-rulesets.js'),
-    require('./ugly/space-attribs.js'),
-    require('./ugly/space-important.js'),
-    require('./ugly/space-mq.js'),
-    require('./ugly/space-at-block.js'),
-    require('./ugly/space-values.js'),
+    require('./ugly/space-adjacent'),
+    require('./ugly/space-functions'),
+    require('./ugly/space-trim'),
+    require('./ugly/space-single'),
+    require('./ugly/space-delimiter'),
+    require('./ugly/space-rulesets'),
+    require('./ugly/space-attribs'),
+    require('./ugly/space-important'),
+    require('./ugly/space-mq'),
+    require('./ugly/space-at-block'),
+    require('./ugly/space-values'),
     require('./ugly/space-selectorops'),
-    require('./ugly/ie-pseudo-fix.js'),
-    require('./ugly/dedup-delimiters.js'),
-    require('./ugly/last-delimiter.js')
+    require('./ugly/ie-pseudo-fix'),
+    require('./ugly/dedup-delimiters'),
+    require('./ugly/last-delimiter')
   ]);
 }
 
 function uglyAST(ast) {
-  ast = uglyfyAST(ast);
-  return gonzo.traverse(ast, [
-    require('./ugly/comments.js')
+  ast = gonzo.traverse(ast, [
+    require('./ugly/comments')
   ]);
+
+  return uglyfyAST(ast);
 }
 
 function prettyAST(ast) {
   ast = uglyfyAST(ast);
   return gonzo.traverse(ast, [
-    require('./pretty/tops.js'),
-    require('./pretty/blocks.js'),
-    require('./pretty/at.js'),
-    require('./pretty/at-block.js'),
-    require('./pretty/value.js'),
-    require('./pretty/last-delimiter.js'),
-    require('./pretty/selector.js'),
-    require('./pretty/mq.js')
+    require('./pretty/tops'),
+    require('./pretty/blocks'),
+    require('./pretty/at'),
+    require('./pretty/at-block'),
+    require('./pretty/value'),
+    require('./pretty/last-delimiter'),
+    require('./pretty/selector'),
+    require('./pretty/mq')
   ]);
 }
 
@@ -2693,8 +2695,31 @@ exports.pretty = function pretty(css) {
 
 exports.uglyAST = uglyAST;
 exports.prettyAST = prettyAST;
-exports.util = require('./util.js');
-},{"./pretty/at-block.js":9,"./pretty/at.js":10,"./pretty/blocks.js":11,"./pretty/last-delimiter.js":12,"./pretty/mq.js":13,"./pretty/selector.js":14,"./pretty/tops.js":15,"./pretty/value.js":16,"./ugly/comments.js":18,"./ugly/dedup-delimiters.js":19,"./ugly/ie-pseudo-fix.js":20,"./ugly/last-delimiter.js":21,"./ugly/space-at-block.js":22,"./ugly/space-attribs.js":23,"./ugly/space-delimiter.js":24,"./ugly/space-functions.js":25,"./ugly/space-important.js":26,"./ugly/space-mq.js":27,"./ugly/space-rulesets.js":28,"./ugly/space-selectorops":29,"./ugly/space-single.js":30,"./ugly/space-trim.js":31,"./ugly/space-values.js":32,"./util.js":33,"gonzales-ast":1}],18:[function(require,module,exports){
+exports.util = require('./util');
+exports.visitors = {
+  ugly: []
+};
+
+[
+  'comments',
+  'space-functions',
+  'space-trim',
+  'space-single',
+  'space-delimiter',
+  'space-rulesets',
+  'space-attribs',
+  'space-important',
+  'space-mq',
+  'space-at-block',
+  'space-values',
+  'space-selectorops',
+  'ie-pseudo-fix',
+  'dedup-delimiters',
+  'last-delimiter'
+].forEach(function(m) {
+  exports.visitors.ugly[m] = require('./ugly/' + m);
+})
+},{"./pretty/at":10,"./pretty/at-block":9,"./pretty/blocks":11,"./pretty/last-delimiter":12,"./pretty/mq":13,"./pretty/selector":14,"./pretty/tops":15,"./pretty/value":16,"./ugly/comments":18,"./ugly/dedup-delimiters":19,"./ugly/ie-pseudo-fix":20,"./ugly/last-delimiter":21,"./ugly/space-adjacent":22,"./ugly/space-at-block":23,"./ugly/space-attribs":24,"./ugly/space-delimiter":25,"./ugly/space-functions":26,"./ugly/space-important":27,"./ugly/space-mq":28,"./ugly/space-rulesets":29,"./ugly/space-selectorops":30,"./ugly/space-single":31,"./ugly/space-trim":32,"./ugly/space-values":33,"./util":34,"gonzales-ast":1}],18:[function(require,module,exports){
 module.exports = {
 
   test: function(name, nodes) {
@@ -2715,7 +2740,7 @@ module.exports = {
     // ie mac hack ends
     if (this.ie5machack) { 
       this.ie5machack = false;
-      node[1] = ' ';
+      node = ['raw', '/**/'];
       return node;
     }
 
@@ -2742,7 +2767,13 @@ module.exports = {
 
   process: function(node) {
     var delim_added = false;
+    var decl_found = false;
     return node.filter(function(n) {
+
+      if (n[0] === 'declaration') {
+        decl_found = true;
+      }
+
       if (n[0] !== 'decldelim') {
         delim_added = false;
         return true;
@@ -2750,6 +2781,11 @@ module.exports = {
       if (delim_added) {
         return false;
       }
+
+      if (!decl_found) { // leading delimiter, forget it
+        return false;
+      }
+
       delim_added = true;
       return true;
     });
@@ -2763,7 +2799,7 @@ module.exports = {
 module.exports = {
 
   test: function(name, nodes) {
-    return name === 'pseudoc';
+    return name === 'pseudoc' || name === 'pseudoe';
   },
 
   process: function(node) {
@@ -2797,6 +2833,34 @@ var util = require('../util.js');
 module.exports = {
 
   test: function(name, nodes) {
+    return (
+      name === 'block' ||
+      name === 'simpleselector' ||
+      name === 'value'
+    );
+  },
+
+  process: function(node) {
+
+    for (var i = 1; i < node.length; i++) {
+      if (node[i][0] === 's') {
+        if (node[i - 1] && node[i - 1][0] === 's') {
+          node.splice(i, 1);
+        }
+      }
+    }
+
+    return node;
+  }
+
+};
+
+},{"../util.js":34}],23:[function(require,module,exports){
+var util = require('../util.js');
+
+module.exports = {
+
+  test: function(name, nodes) {
     return name === 'atruleb';
   },
 
@@ -2812,7 +2876,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],23:[function(require,module,exports){
+},{"../util.js":34}],24:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -2832,7 +2896,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],24:[function(require,module,exports){
+},{"../util.js":34}],25:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -2852,7 +2916,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],25:[function(require,module,exports){
+},{"../util.js":34}],26:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -2877,7 +2941,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],26:[function(require,module,exports){
+},{"../util.js":34}],27:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -2897,7 +2961,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],27:[function(require,module,exports){
+},{"../util.js":34}],28:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -2907,7 +2971,12 @@ module.exports = {
   },
 
   process: function(node) {
-    util.trimRight(node);
+
+    if (node[1][0] === 's' && node[2][0] === 'braces') {
+      util.trim(node);
+    } else {
+      util.trimRight(node);
+    }
 
     for (var i = 1; i < node.length; i++) {
       if (node[i][0] === 'operator') {
@@ -2920,7 +2989,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],28:[function(require,module,exports){
+},{"../util.js":34}],29:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -2942,7 +3011,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],29:[function(require,module,exports){
+},{"../util.js":34}],30:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -2962,7 +3031,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],30:[function(require,module,exports){
+},{"../util.js":34}],31:[function(require,module,exports){
 module.exports = {
 
   test: function(name, nodes) {
@@ -2976,7 +3045,7 @@ module.exports = {
 
 };
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -3011,7 +3080,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],32:[function(require,module,exports){
+},{"../util.js":34}],33:[function(require,module,exports){
 var util = require('../util.js');
 
 module.exports = {
@@ -3033,7 +3102,7 @@ module.exports = {
 
 };
 
-},{"../util.js":33}],33:[function(require,module,exports){
+},{"../util.js":34}],34:[function(require,module,exports){
 exports.trim = function trim(ast) {
   if (ast.length < 2) {
     return; // already empty, nothing to trim
